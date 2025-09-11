@@ -13,12 +13,12 @@ The user must use SSH port forwarding to access the the CryoSPARC master via web
 ## Install
 
 1. After obtaining a [CryoSPARC license](https://cryosparc.com/download), download the master and worker tarballs:
-
-    version=4.7.1
-    license_id=...CRYOSPARC_LICENSE_ID...
-    curl -o cryosparc-master_v${version}.tar.gz -L https://get.cryosparc.com/download/master-v${version}/${license_id} 
-    curl -o cryosparc-worker_v${version}.tar.gz -L https://get.cryosparc.com/download/worker-v${version}/${license_id} 
-
+```
+version=4.7.1
+license_id=...CRYOSPARC_LICENSE_ID...
+curl -o cryosparc-master_v${version}.tar.gz -L https://get.cryosparc.com/download/master-v${version}/${license_id} 
+curl -o cryosparc-worker_v${version}.tar.gz -L https://get.cryosparc.com/download/worker-v${version}/${license_id} 
+```
 2. Build the SIF image (from the same working directory as the CryoSPARC master/worker tarballs):
 
     singularity build --fakeroot cryosparc.sif Singularity.def
@@ -33,10 +33,10 @@ The user must use SSH port forwarding to access the the CryoSPARC master via web
 ## Testing
 
 1. Download the test data set to a filesystem accessible from all compute nodes:
-
-    singularity exec --env CRYOSPARC_DB_PATH=/ --env CRYOSPARC_BASE_PORT=1 cryosparc.sif cryosparcm downloadtest
-    tar -xf empiar_10025_subset.tar
-
+```
+singularity exec --env CRYOSPARC_DB_PATH=/ --env CRYOSPARC_BASE_PORT=1 cryosparc.sif cryosparcm downloadtest
+tar -xf empiar_10025_subset.tar
+```
 2. Launch the CryoSPARC OOD batch app.
     * The CryoSPARC database path should be on a shared filesystem for persistence after the OOD job terminates.
     * Many CryoSPARC jobs require least 1 GPU.
