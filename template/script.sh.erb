@@ -1,0 +1,104 @@
+#!/usr/bin/env bash
+
+set -o errexit -o nounset -o pipefail # -o xtrace
+
+readonly singularity_image=${HOME}/cryosparc.sif # CUSTOMIZE
+# CryoSPARC license
+#
+export SINGULARITYENV_CRYOSPARC_LICENSE_ID="<%= context.cryosparc_license %>"
+export SINGULARITYENV_CRYOSPARC_DB_ENABLE_AUTH=false
+export SINGULARITYENV_CRYOSPARC_FORCE_HOSTNAME=true
+export SINGULARITYENV_CRYOSPARC_BASE_PORT=${port} # ${port}...${port}+7 will be used
+export SINGULARITYENV_CRYOSPARC_DEVELOP=false
+export SINGULARITYENV_CRYOSPARC_INSECURE=false
+export SINGULARITYENV_CRYOSPARC_CLICK_WRAP=true
+if [ ${SLURM_GPUS:-0} -gt 0 ]
+then
+  export SINGULARITYENV_CRYOSPARC_USE_GPU=true
+  export SINGULARITY_NV=true
+else
+  export SINGULARITYENV_CRYOSPARC_USE_GPU=false
+  export SINGULARITY_NV=false
+fi
+export SINGULARITYENV_PYTHONNOUSERSITE=1
+export SINGULARITYENV_USER=$(id -un)
+export SINGULARITY_CLEANENV=true
+
+cryosparc_user_path="<%= context.database_folder %>"
+
+# problems creating db at $HOME/cryosparc_db; must be a subdirectory
+if [ "${cryosparc_user_path}" = "${HOME}" ]
+then
+  cryosparc_user_path=${cryosparc_user_path}/cryosparc
+fi
+
+export SINGULARITYENV_CRYOSPARC_DB_PATH=${cryosparc_user_path}/cryosparc_db
+
+readonly cryosparc_user_password="<%= context.cryosparc_user_password %>"
+
+mkdir -p ${cryosparc_user_path}/run
+
+tmpdir=$(mktemp -d)
+export SINGULARITY_BIND="${tmpdir}:/tmp,${cryosparc_user_path}/run:/opt/cryosparc_master/run"
+
+cryosparcm() {
+  singularity exec instance://cryosparc cryosparcm "$@"
+}
+
+cryosparcw() {
+  singularity exec instance://cryosparc cryosparcw "$@"
+}
+
+# An instance is used to support sites that use non-setuid mode, to avoid
+# squashfuse_ll terminating prematurely when supervisord daemonizes
+singularity instance start "${singularity_image}" cryosparc
+
+if [ ! -e "${SINGULARITYENV_CRYOSPARC_DB_PATH}" ]
+then
+  new_db=true
+else
+  new_db=false
+fi
+
+if ${new_db}
+then
+  cryosparcm start
+  # initial setup for new database
+  # Add a user account for the webapp
+  cryosparcm createuser \
+    --email "${SINGULARITYENV_USER}@fas.rc" \
+    --password "${cryosparc_user_password}" \
+    --username "${SINGULARITYENV_USER}" \
+    --firstname "${SINGULARITYENV_USER}" \
+    --lastname "${SINGULARITYENV_USER}"  
+else
+# adapted from `cryosparcm changeport``
+  cryosparcm start database
+  cryosparcm checkdb > /dev/null 2>&1 || echo "Reconfiguring database." && cryosparcm fixdbport
+  cryosparcm restart
+  cryosparcm checkdb
+  cryosparcm cli "reset_password('${SINGULARITYENV_USER}@fas.rc', '${cryosparc_user_password}')"
+fi
+
+# "cryosparw connect --update" doesn't work if the hostname has changed
+cryosparcm cli 'remove_scheduler_lane("default")'
+cryosparcw connect --ssdpath=/tmp --master $(uname -n) --worker $(uname -n) --port ${SINGULARITYENV_CRYOSPARC_BASE_PORT}
+# Restrict CPU & memory to Slurm-allocated amount.
+# Can only be set with --update, not on initial connect:
+# https://discuss.cryosparc.com/t/error-assigning-cpus-to-worker/9875/3
+cryosparcw connect --ssdpath=/tmp --master $(uname -n) --worker $(uname -n) --port ${SINGULARITYENV_CRYOSPARC_BASE_PORT} --update --cpus ${SLURM_CPUS_PER_TASK} --rams $((SLURM_MEM_PER_NODE/8000))
+
+
+# https://guide.cryosparc.com/setup-configuration-and-management/software-system-guides/guide-installation-testing-with-cryosparcm-test
+# doesn't take long to run; enabled to serve as a sanity check
+SINGULARITYENV_TERM=dumb cryosparcm test install
+##### uncomment below to test gpu / tensorflow / pytorch (after creating a project)
+#CRYOSPARC_TEST_PROJECT=P2 # create this project before testing
+#SINGULARITYENV_TERM=dumb cryosparcm test workers ${CRYOSPARC_TEST_PROJECT} --test gpu --test-tensorflow --test-pytorch
+##### uncomment above to test
+
+# FIXME
+cryosparcm status
+
+# TODO: wait until cryosparcm's python process exits instead
+sleep infinity

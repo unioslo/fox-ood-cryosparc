@@ -1,0 +1,51 @@
+########################################
+#### remote image/package install
+#### See https://guide.cryosparc.com/setup-configuration-and-management/how-to-download-install-and-configure/downloading-and-installing-cryosparc
+Bootstrap: docker
+From: docker.io/rockylinux/rockylinux:8-ubi
+
+%arguments
+    cryosparc_version=4.7.1
+
+%files
+    ./cryosparc-master_v{{ cryosparc_version }}.tar.gz /
+    ./cryosparc-worker_v{{ cryosparc_version }}.tar.gz /
+
+%environment
+    export PATH=/opt/cryosparc_master/bin:/opt/cryosparc_worker/bin:${PATH}
+
+# curl needed for `cryosparcm downloadtest`
+%post
+    dnf install -y curl zip
+    dnf clean all
+
+########################################
+##### remote image/package install
+##### NOTE: at build time, need to copy in a script with environment variables settings, source, & delete
+#   curl -L https://get.cryosparc.com/download/master-v${VERSION}/${LICENSE_ID} | tar -C /opt -xzf -
+#   curl -L https://get.cryosparc.com/download/worker-v${VERISON}/${LICENSE_ID} | tar -C /opt -xzf -
+########################################
+##### local image/package install
+    tar -C /opt -xzf /cryosparc-master_v{{ cryosparc_version }}.tar.gz 
+    tar -C /opt -xzf /cryosparc-worker_v{{ cryosparc_version }}.tar.gz 
+    rm -f /cryosparc*.tar.gz
+########################################
+
+    for dist in master worker
+    do
+      (
+        export CRYOSPARC_ROOT_DIR=/opt/cryosparc_${dist}
+        export CRYOSPARC_CONDA_ENV="cryosparc_${dist}_env"
+        /opt/cryosparc_${dist}/check_install_deps.sh
+
+        # emulate finish_deps() in cryosparc[mw]
+        . ${CRYOSPARC_ROOT_DIR}/deps/anaconda/etc/profile.d/conda.sh
+        conda run -n cryosparc_${dist}_env python -c "import libtiff"
+      )
+    done
+
+    # cryosparcm expects config.sh; must be nonempty for `cryosparcm status` to exit with zero exit status
+    # environment variables set in OOD app template/script.sh.erb
+    echo 'export CRYOSPARC_LICENSE_ID=${CRYOSPARC_LICENSE_ID}' > /opt/cryosparc_master/config.sh 
+    chmod +x /opt/cryosparc_master/config.sh
+    ln /opt/cryosparc_master/config.sh /opt/cryosparc_worker/config.sh

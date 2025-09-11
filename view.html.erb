@@ -1,0 +1,39 @@
+<script src="https://cdn.jsdelivr.net/npm/clipboard@2.0.10/dist/clipboard.min.js"></script>
+
+<script type="text/javascript">
+(function () {
+    // this uses event delegation so it captures events even if dom element is recreated
+    var clipboardjs = new ClipboardJS('#copy-ssh-command');
+    clipboardjs.on('success', function(e) {
+        $(e.trigger).tooltip({title: 'Copied SSH command to clipboard!', trigger: 'manual', placement: 'bottom'}).tooltip('show');
+        setTimeout(() => $(e.trigger).tooltip('hide'), 2000);
+        e.clearSelection();
+    });
+    clipboardjs.on('error', function(e) {
+        e.clearSelection();
+    });
+})();
+</script>
+
+<!-- This should be made into a fancy button TODO -->
+For the time being the proxy does not work for this application.<br>
+You can connect by tunneling via the login nodes:
+<br>
+<br>
+1. Use your system's SSH client to establish an SSH tunnel to the GPU node running CryoSPARC with the following command:  
+<input id="txt_ssh_command" value="ssh -NL <%= port %>:<%= host %>:<%= port %> <%= ENV['USER'] %>@your-cluster-login-node" class="form-control" type="text" readonly="readonly">
+<br>
+<button id="copy-ssh-command" class="btn btn-primary btn-sm float-right" data-clipboard-action="copy" data-clipboard-target="#txt_ssh_command" data-original-title="Copy SSH Command to Clipboard" title="Copy SSH Command to Clipboard"><span class="fa fa-clipboard"></span> Copy SSH Command to Clipboard</button>
+<br>
+Upon successful connection, the `ssh` command will appear to hang.
+Leave the `ssh` command running in the terminal window to keep the ssh tunnel established.  
+<br>
+2. open <a href="http://localhost:<%= port %>" target="_blank">http&colon;//localhost:<%= port %></a> in your browser 
+<br>
+**user:** _<%= ENV['USER'] %>@fas.rc_  
+**password:** _(password entered in the previous form)_  
+<br>
+You may not be prompted to log in if you have previously authenticated and the session is still cached in your browser.  
+<br>
+3. To stop CryoSPARC, click the red "Delete" button in the top-right corner of this interactive session entry.
+CryoSPARC will also be automatically stopped if the above **Time Remaining** reaches 0 minutes.
