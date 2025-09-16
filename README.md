@@ -1,7 +1,7 @@
 # ood-cryosparc
 This OnDemand [CryoSPARC](https://cryosparc.com/) app launches CryoSPARC (both [master and worker processes](https://guide.cryosparc.com/setup-configuration-and-management/hardware-and-system-requirements#master-worker-pattern)) on a single compute node.
 
-The user must use SSH port forwarding to access the the CryoSPARC master via web browser.
+The CryoSPARC master can be accessed via a web browser in an OOD Remote Desktop, or local web browser with SSH port forwarding.
 
 ## Prerequisites
 
@@ -41,7 +41,7 @@ tar -xf empiar_10025_subset.tar
     * The CryoSPARC database path should be on a shared filesystem for persistence after the OOD job terminates.
     * Many CryoSPARC jobs require least 1 GPU.
 
-3. After CryoSPARC is ready, instructions on establishing an SSH tunnel to the specified node/port and accessing via web browser will be shown.
+3. After CryoSPARC is ready, instructions on connecting to the CryoSPARC master from an OOD Remote Desktop or local web browser (with SSH tunneling) will be shown.
 
 4. [Verify the CryoSPARC Installation with the Extensive Validation Job](https://guide.cryosparc.com/setup-configuration-and-management/software-system-guides/tutorial-verify-cryosparc-installation-with-the-extensive-workflow-sysadmin-guide)
    - In the "Path to Dataset Data" textbox, enter the absolute path to the empiar_10025_subset directory extracted in step 1
