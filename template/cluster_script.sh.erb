@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+
+#SBATCH --account="<%= context.auto_accounts %>"
+#SBATCH --job-name=cryosparc_{{ project_uid }}_{{ job_uid }}
+#SBATCH --cpus-per-task={{ num_cpu }}
+#SBATCH --mem={{ ram_gb|int }}G
+#SBATCH --nodes=1
+{% if num_gpu | int >= 1 %}
+#SBATCH --partition=accel
+#SBATCH --gres=gpu:{{ num_gpu }}
+{% else %}
+#SBATCH --partition=default
+{% endif %}
+#SBATCH --time=12:0:0
+#SBATCH --output={{ job_dir_abs }}/{{ project_uid }}_{{ job_uid }}_slurm.out
+#SBATCH --error={{ job_dir_abs }}/{{ project_uid }}_{{ job_uid }}_slurm.err
+
+export FOX_ACCEL_AUTO_LONG=1
+
+export APPTAINERENV_CRYOSPARC_LICENSE_ID="<%= context.cryosparc_license %>"
+export APPTAINERENV_CRYOSPARC_SSD_PATH="$SCRATCH"
+export APPTAINERENV_CRYOSPARC_IMPROVED_SSD_CACHE=true
+
+apptainer_image="/cluster/opt/OOD/fox-cryosparc-<%= context.cryosparc_version %>.sif"
+
+# Run the worker inside Apptainer GPU container
+apptainer exec --nv \
+    --bind "/fp/projects01/<%= context.auto_accounts %>":"/fp/projects01/<%= context.auto_accounts %>":rw \
+    --bind "$SCRATCH":"$SCRATCH":rw \
+    ${apptainer_image} \
+    {{ run_cmd }}

@@ -1,51 +1,48 @@
-# ood-cryosparc
-This OnDemand [CryoSPARC](https://cryosparc.com/) app launches CryoSPARC (both [master and worker processes](https://guide.cryosparc.com/setup-configuration-and-management/hardware-and-system-requirements#master-worker-pattern)) on a single compute node.
+# CryoSPARC for Open OnDemand
 
-The CryoSPARC master can be accessed via a web browser in an OOD Remote Desktop, or local web browser with SSH port forwarding.
+This project provides an [Open OnDemand](https://openondemand.org/) app for launching and managing [CryoSPARC](https://cryosparc.com/) sessions on a Slurm-based HPC cluster.  
+It is designed for the **[Fox](https://www.uio.no/english/services/it/research/hpc/fox/index.html)** cluster at the **[University of Oslo (UiO)](https://www.uio.no/english/)** but can be adapted for similar systems.
 
-## Prerequisites
+> **Based on:** [Harvard University FASRC’s Open OnDemand CryoSPARC integration](https://github.com/fasrc/ood-cryosparc) (thanks!)  
+> **Enhancements by UiO/Fox:** Dynamic partition selection via a CryoSPARC cluster lane.
 
-* [Slurm cluster](https://osc.github.io/ood-documentation/latest/installation/resource-manager/slurm.html)
-* [Apptainer](https://apptainer.org/) or [SingularityCE](https://sylabs.io/singularity/)
-* CryoSPARC license
-  - https://cryosparc.com/download
+---
 
-## Install
+## Overview
 
-1. After obtaining a [CryoSPARC license](https://cryosparc.com/download), download the master and worker tarballs:
-```
-version=4.7.1
-license_id=...CRYOSPARC_LICENSE_ID...
-curl -o cryosparc-master_v${version}.tar.gz -L https://get.cryosparc.com/download/master-v${version}/${license_id} 
-curl -o cryosparc-worker_v${version}.tar.gz -L https://get.cryosparc.com/download/worker-v${version}/${license_id} 
-```
-2. Build the SIF image (from the same working directory as the CryoSPARC master/worker tarballs):
+CryoSPARC is started as a **main instance** (database and web server) within an Open OnDemand session on a **CPU-only partition**, while individual CryoSPARC jobs are dynamically submitted to **CPU or GPU partitions** depending on their hardware requirements.
 
-    singularity build --fakeroot cryosparc.sif Singularity.def
+---
 
-## Site-specific modifications
+## Features
 
-* [form.yml.erb](form.yml.erb) - replace `odyssey3` with a valid cluster OOD cluster configuration name
-* [template/script.sh.erb](template/script.sh.erb) - replace `${HOME}/cryosparc.sif` with the path to the cryosparc.sif built in Install step 2
-* [template/before.sh.erb](template/before.sh.erb) - (if necessary) replace `find_port localhost 7000 11000` with valid port range in your environment
+-  Launches a CryoSPARC web interface (master + database) via an Open OnDemand interactive session.  
+-  Runs the master on a **CPU partition** to conserve GPU resources.  
+-  Supports job submission through Slurm to:
+  - CPU-only partitions (for preprocessing, etc.)
+  - GPU partitions (for reconstruction and refinement jobs)  
+-  Uses `cluster_info.json` and a templated submit script to direct jobs to the correct Slurm partitions automatically.
 
+---
 
-## Testing
+## Architecture
 
-1. Download the test data set to a filesystem accessible from all compute nodes:
-```
-singularity exec --env CRYOSPARC_DB_PATH=/ --env CRYOSPARC_BASE_PORT=1 cryosparc.sif cryosparcm downloadtest
-tar -xf empiar_10025_subset.tar
-```
-2. Launch the CryoSPARC OOD batch app.
-    * The CryoSPARC database path should be on a shared filesystem for persistence after the OOD job terminates.
-    * Many CryoSPARC jobs require least 1 GPU.
+1. **OOD Session Launch**
+   - The user starts a CryoSPARC session through Open OnDemand.  
+   - A Slurm job is submitted to a **CPU partition** to run:
+     - CryoSPARC master process  
+     - MongoDB database  
+     - Web interface (accessible via OOD)
 
-3. After CryoSPARC is ready, instructions on connecting to the CryoSPARC master from an OOD Remote Desktop or local web browser (with SSH tunneling) will be shown.
+2. **CryoSPARC Job Submission**
+   - CryoSPARC submits jobs via its `cluster_info.json` configuration.
+   - The submit script dynamically selects the correct partition based on job type:
+     - GPU jobs → `gpu` partition  
+     - CPU-only jobs → `cpu` partition  
+   - This selection is handled transparently through templated SBATCH directives and substitution variables.
 
-4. [Verify the CryoSPARC Installation with the Extensive Validation Job](https://guide.cryosparc.com/setup-configuration-and-management/software-system-guides/tutorial-verify-cryosparc-installation-with-the-extensive-workflow-sysadmin-guide)
-   - In the "Path to Dataset Data" textbox, enter the absolute path to the empiar_10025_subset directory extracted in step 1
+3. **Session Lifecycle**
+   - The CryoSPARC master runs within the OOD session’s Slurm allocation.
+   - All user jobs are submitted as separate Slurm jobs through CryoSPARC.
+   - When the OOD session ends, the CryoSPARC master and database is killed.
 
-## Credits
-
-Kevin Dalton, Milson Munakami, Nathan Weeks

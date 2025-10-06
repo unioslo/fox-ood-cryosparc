@@ -1,12 +1,52 @@
-# Job submission configuration file
 batch_connect:
   template: "basic"
+
 script:
-  reservation_id: <%= custom_reservation %>
-  native:
-    - "--mem=<%= custom_memory_per_node.blank? ? 2 : custom_memory_per_node.to_s %>G"
-    - "--time=<%= custom_time.blank? ? "04:00:00" : custom_time.to_s %>"
-    - "--cpus-per-task=<%= custom_num_cores.blank? ? 1 : custom_num_cores.to_i %>"
-   <%- if !custom_num_gpus.to_i.zero? -%>
-    - "--gpus=<%= custom_num_gpus.to_i %>"
-   <%- end -%>
+  job_name: "OOD CryoSPARC"
+  native: [
+            "-c", "<%= ec_cpus.blank?  ? 1 : ec_cpus.to_i %>",
+           <%- if ec_gpus.to_i > 0 -%>
+              <%- case global_fox_alacarte -%>
+                <%- when 'RTX30' -%>
+                  "--partition=accel",
+                  "--gres=gpu:rtx30:<%= ec_gpus.to_i %>",
+                <%- when 'A100-40' -%>
+                  "--partition=accel",
+                  "--gres=gpu:a100",
+                <%- when 'A100-80' -%>
+                  "--partition=accel",
+                  "--gres=gpu:a100_80:<%= ec_gpus.to_i %>",
+                <% when 'A40' -%>
+                  "--partition=accel",
+                  "--gres=gpu:a40",
+                <%- when 'L40S' -%>
+                  "--partition=accel",
+                  "--gres=gpu:l40s:<%= ec_gpus.to_i %>",
+                <%- when 'H100NV' -%>
+                  "--partition=accel",
+                  "--gres=gpu:h100nv:<%= ec_gpus.to_i %>",
+                <%- when 'MIG' -%>
+                  "--partition=mig",
+                  "-G", "<%= ec_gpus.to_i %>",
+                <%- else -%>
+                  "--partition=accel",
+                  "--gres=gpu:<%= global_fox_gpugres %>:<%= ec_gpus.to_i %>",
+                <%- end -%>
+
+            <%- else -%>
+              "--partition=normal",
+            <%- end -%>
+
+            <%- if not ec_mem.blank? -%>
+              "--mem", "<%= ec_mem.to_i %>G",
+            <%- end -%>
+
+            <%- if ec_mail_on_start -%>
+              "--mail-type=BEGIN",
+            <%- end -%>
+
+            <%- if custom_reservation -%>
+              "--reservation=<%= custom_reservation %>",
+            <%- end -%>
+
+          ]
