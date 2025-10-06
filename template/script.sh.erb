@@ -1,59 +1,64 @@
-#!/usr/bin/env bash
+#!/usr/bin/bash -x
 
 set -o errexit -o nounset -o pipefail # -o xtrace
 
-readonly singularity_image=${HOME}/cryosparc.sif # CUSTOMIZE
+readonly apptainer_image=/cluster/opt/OOD/fox-cryosparc-"<%= context.cryosparc_version %>".sif
+
+export FOX_ACCEL_AUTO_LONG=1
+
+# Fill in correct values in the slurm submit script template
+CLUSTER_INFO="$PWD/cluster_info.json"
+CLUSTER_SCRIPT="$PWD/cluster_script.sh"
+ACCOUNT_ID=$(echo "<%= context.auto_accounts %>" | sed 's/\"//g')
+sed -i 's/ACCOUNT_ID/'$ACCOUNT_ID'/g' "$CLUSTER_SCRIPT"
+
+
 # CryoSPARC license
 #
-export SINGULARITYENV_CRYOSPARC_LICENSE_ID="<%= context.cryosparc_license %>"
-export SINGULARITYENV_CRYOSPARC_DB_ENABLE_AUTH=false
-export SINGULARITYENV_CRYOSPARC_FORCE_HOSTNAME=true
-export SINGULARITYENV_CRYOSPARC_BASE_PORT=${port} # ${port}...${port}+7 will be used
-export SINGULARITYENV_CRYOSPARC_DEVELOP=false
-export SINGULARITYENV_CRYOSPARC_INSECURE=false
-export SINGULARITYENV_CRYOSPARC_CLICK_WRAP=true
+export APPTAINERENV_CRYOSPARC_LICENSE_ID="<%= context.cryosparc_license %>"
+export APPTAINERENV_CRYOSPARC_DB_ENABLE_AUTH=false
+export APPTAINERENV_CRYOSPARC_FORCE_HOSTNAME=true
+export APPTAINERENV_CRYOSPARC_BASE_PORT=${port} # ${port}...${port}+7 will be used
+export APPTAINERENV_CRYOSPARC_DEVELOP=false
+export APPTAINERENV_CRYOSPARC_INSECURE=false
+export APPTAINERENV_CRYOSPARC_CLICK_WRAP=true
 if [ ${SLURM_GPUS:-0} -gt 0 ]
 then
-  export SINGULARITYENV_CRYOSPARC_USE_GPU=true
-  export SINGULARITY_NV=true
+  export APPTAINERENV_CRYOSPARC_USE_GPU=true
+  export APPTAINER_NV=true
 else
-  export SINGULARITYENV_CRYOSPARC_USE_GPU=false
-  export SINGULARITY_NV=false
+  export APPTAINERENV_CRYOSPARC_USE_GPU=false
+  export APPTAINER_NV=false
 fi
-export SINGULARITYENV_PYTHONNOUSERSITE=1
-export SINGULARITYENV_USER=$(id -un)
-export SINGULARITY_CLEANENV=true
+export APPTAINERENV_PYTHONNOUSERSITE=1
+export APPTAINERENV_USER=$(id -un)
+export APPTAINER_CLEANENV=true
 
-cryosparc_user_path="<%= context.database_folder %>"
+cryosparc_user_path=$HOME/cryosparc
 
-# problems creating db at $HOME/cryosparc_db; must be a subdirectory
-if [ "${cryosparc_user_path}" = "${HOME}" ]
-then
-  cryosparc_user_path=${cryosparc_user_path}/cryosparc
-fi
-
-export SINGULARITYENV_CRYOSPARC_DB_PATH=${cryosparc_user_path}/cryosparc_db
+export PROJDIR="/fp/projects01/<%= context.auto_accounts %>"
+export APPTAINERENV_CRYOSPARC_DB_PATH=${cryosparc_user_path}/database
 
 readonly cryosparc_user_password="<%= context.cryosparc_user_password %>"
 
 mkdir -p ${cryosparc_user_path}/run
 
 tmpdir=$(mktemp -d)
-export SINGULARITY_BIND="${tmpdir}:/tmp,${cryosparc_user_path}/run:/opt/cryosparc_master/run"
+export APPTAINER_BIND="${tmpdir}:/tmp:rw,$PROJDIR:$PROJDIR:rw,$SCRATCH:$SCRATCH:rw,${cryosparc_user_path}/run:/cryosparc/cryosparc_master/run:rw"
 
 cryosparcm() {
-  singularity exec instance://cryosparc cryosparcm "$@"
+  apptainer exec instance://cryosparc cryosparcm "$@"
 }
 
 cryosparcw() {
-  singularity exec instance://cryosparc cryosparcw "$@"
+  apptainer exec instance://cryosparc cryosparcw "$@"
 }
 
 # An instance is used to support sites that use non-setuid mode, to avoid
 # squashfuse_ll terminating prematurely when supervisord daemonizes
-singularity instance start "${singularity_image}" cryosparc
+apptainer instance start --nv "${apptainer_image}" cryosparc
 
-if [ ! -e "${SINGULARITYENV_CRYOSPARC_DB_PATH}" ]
+if [ ! -e "${APPTAINERENV_CRYOSPARC_DB_PATH}" ]
 then
   new_db=true
 else
@@ -66,35 +71,41 @@ then
   # initial setup for new database
   # Add a user account for the webapp
   cryosparcm createuser \
-    --email "${SINGULARITYENV_USER}@fas.rc" \
+    --email "${APPTAINERENV_USER}@educloud.no" \
     --password "${cryosparc_user_password}" \
-    --username "${SINGULARITYENV_USER}" \
-    --firstname "${SINGULARITYENV_USER}" \
-    --lastname "${SINGULARITYENV_USER}"  
+    --username "${APPTAINERENV_USER}" \
+    --firstname "${APPTAINERENV_USER}" \
+    --lastname "${APPTAINERENV_USER}"  
 else
 # adapted from `cryosparcm changeport``
   cryosparcm start database
   cryosparcm checkdb > /dev/null 2>&1 || echo "Reconfiguring database." && cryosparcm fixdbport
   cryosparcm restart
   cryosparcm checkdb
-  cryosparcm cli "reset_password('${SINGULARITYENV_USER}@fas.rc', '${cryosparc_user_password}')"
+  cryosparcm cli "reset_password('${APPTAINERENV_USER}@educloud.no', '${cryosparc_user_password}')"
 fi
 
 # "cryosparw connect --update" doesn't work if the hostname has changed
 cryosparcm cli 'remove_scheduler_lane("default")'
-cryosparcw connect --ssdpath=/tmp --master $(uname -n) --worker $(uname -n) --port ${SINGULARITYENV_CRYOSPARC_BASE_PORT}
+
+# Prepare job submission cluster
+cryosparcm cluster connect \
+  --cluster "$CLUSTER_INFO" \
+  --cluster-script "$CLUSTER_SCRIPT"
+
+cryosparcw connect --ssdpath=$SCRATCH --master $(uname -n) --worker $(uname -n) --port ${APPTAINERENV_CRYOSPARC_BASE_PORT}
 # Restrict CPU & memory to Slurm-allocated amount.
 # Can only be set with --update, not on initial connect:
 # https://discuss.cryosparc.com/t/error-assigning-cpus-to-worker/9875/3
-cryosparcw connect --ssdpath=/tmp --master $(uname -n) --worker $(uname -n) --port ${SINGULARITYENV_CRYOSPARC_BASE_PORT} --update --cpus ${SLURM_CPUS_PER_TASK} --rams $((SLURM_MEM_PER_NODE/8000))
+cryosparcw connect --ssdpath=$SCRATCH --master $(uname -n) --worker $(uname -n) --port ${APPTAINERENV_CRYOSPARC_BASE_PORT} --update --cpus ${SLURM_CPUS_PER_TASK} --rams $((SLURM_MEM_PER_NODE/8000))
 
 
 # https://guide.cryosparc.com/setup-configuration-and-management/software-system-guides/guide-installation-testing-with-cryosparcm-test
 # doesn't take long to run; enabled to serve as a sanity check
-SINGULARITYENV_TERM=dumb cryosparcm test install
+APPTAINERENV_TERM=dumb cryosparcm test install
 ##### uncomment below to test gpu / tensorflow / pytorch (after creating a project)
 #CRYOSPARC_TEST_PROJECT=P2 # create this project before testing
-#SINGULARITYENV_TERM=dumb cryosparcm test workers ${CRYOSPARC_TEST_PROJECT} --test gpu --test-tensorflow --test-pytorch
+#APPTAINERENV_TERM=dumb cryosparcm test workers ${CRYOSPARC_TEST_PROJECT} --test gpu --test-tensorflow --test-pytorch
 ##### uncomment above to test
 
 # FIXME

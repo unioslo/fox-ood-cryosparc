@@ -1,78 +1,78 @@
 ---
-name: CryoSPARC
-cluster: "odyssey3" # CUSTOMIZE
+cluster: "fox"
+
+form:
+  - auto_accounts
+  - ec_mail_on_start
+  - bc_num_hours
+  - cryosparc_version
+  - cryosparc_license
+  - cryosparc_user_password
+  - ec_mem
+  - ec_cpus
+  - custom_reservation
+
 attributes:
-  modules: null
+
+  auto_accounts:
+          label: "Choose the Educloud project:"
+          help: |
+                  <small>If you are unsure, ask the project principal</small>
+
+  ec_mail_on_start:
+    label: "Send e-mail when session starts"
+    widget: "check_box"
+    value: false
+    help: |
+      <small>Using the e-mail your account is registered to</small>
+
+  ec_cpus:
+    label: "Number of CPU cores:"
+    widget: "number_field"
+    value: "4"
+    required: true
+    help: |
+      <small>The default value (4) should be sufficient</small>
+
+  ec_mem:
+    label: "RAM (in GB):"
+    value: "16"
+    widget: "number_field"
+    required: true
+    help: |
+      <small>The default value (16) should be sufficient</small>
+
+  cryosparc_version:
+    label: "CryoSPARC version:"
+    widget: "select"
+    options:
+      - [ "4.7.1", "4.7.1" ]
+
   cryosparc_license:
+    widget: text_field
+    placeholder: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+    pattern: "^[\\w]{8}-[\\w]{4}-[\\w]{4}-[\\w]{4}-[\\w]{12}$"
     label: "CryoSPARC license ID"
-    widget: text_field
+    required: true
     help: |
-      Paste your license ID here to get started. Please get your own license ID free of charge for non-profit academic use from <a href="https://cryosparc.com/download" target="_blank">here</a>.
-  database_folder:
-    help: "Select a directory to store cryoSPARC database and run directories"
-    widget: text_field
+      Enter a password to use for this CryoSPARC session. Your CryoSPARC user name will be your Educloud user name.
+
   cryosparc_user_password:
-    label: "cryoSPARC password"
+    label: "CryoSPARC password"
     widget: text_field
     help: |
-      Enter a password to use for this cryoSPARC session. Your cryosparc user name will be your FAS RC user name.
-  bc_queue:
-    label: "Partition"
-    value: "test"
-    widget: text_field
+      Enter a password to use for this CryoSPARC session. Your CryoSPARC user name will be your Educloud user name.
+
+  bc_num_hours:
+    label: "Runtime (in hours) (required)"
+    widget: "number_field"
+    required: true
+    value: "12"
     help: |
-      Partition where to submit your job (--partition).
-  custom_memory_per_node:
-    label: "Memory Allocation in GB"
-    value: <%= defined?(@custom_memory_per_node) ? @custom_memory_per_node : 32 %>
-    min: <%= defined?(@custom_memory_per_node_min) ? @custom_memory_per_node_min : 32 %>
-    step: 1
-    max: <%= defined?(@custom_memory_per_node_max) ? @custom_memory_per_node_max : 373 %>
-    widget: number_field
-    help: |
-      Memory required per node (--mem)
-  custom_num_cores:
-    label: "Number of cores"
-    value: <%= defined?(@custom_num_cores) ? @custom_num_cores : 4 %>
-    min: <%= defined?(@custom_num_cores_min) ? @custom_num_cores_min : 2 %>
-    step: 1
-    max: <%= defined?(@custom_num_cores_max) ? @custom_num_cores_max : 32 %>
-    widget: number_field
-    help: "Number of Cpus to allocate (--cpus-per-task)"
-  custom_num_gpus:
-    label: "Number of GPUs"
-    value: <%= defined?(@custom_num_gpus) ? @custom_num_gpus : 1 %>
-#   min: <%= defined?(@custom_num_gpus_min) ? @custom_num_gpus_min : 1 %>
-    step: 1
-    max: <%= defined?(@custom_num_gpus_max) ? @custom_num_gpus_max : 4 %>
-    widget: number_field
-    help: "Number of GPUs to allocate. Must use a GPU-enabled partition if > 0 (--gpus=N)"
-  custom_time:
-    label: "Allocated Time (expressed in MM , or HH:MM:SS , or DD-HH:MM)."
-    value: "<%= defined?(@custom_time) ? @custom_time : '04:00:00' %>"
-    widget: text_field
-    help: |
-      *sbatch -t, --time=\<time\>*
+      <small>Specify a value larger than the expected runtime of all jobs (including waiting in queue)</small>
+
   custom_reservation:
     label: Reservation (Optional)
     widget: text_field
     help: |
       Use this if you have an active reservation and would like to use it to run your job. (--reservation)
-  bc_account:
-    label: "Slurm Account (Optional)"
-    help: |
-      Account to charge for this job (--account). This will default to your main account (primary group). More information about <a href="https://docs.rc.fas.harvard.edu/kb/fairshare/#Multiple_Accounts" target="_blank">multiple slurm accounts here</a>.
-      
-form:
-  - modules
-  - cryosparc_license
-  - database_folder
-  - cryosparc_user_password
-  - bc_queue
-  - custom_memory_per_node
-  - custom_num_cores
-  - custom_num_gpus
-  - custom_time
-  - custom_reservation
-  - bc_account
-  - bc_email_on_started

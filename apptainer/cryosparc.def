@@ -1,0 +1,61 @@
+Bootstrap: docker
+From: rockylinux:9
+
+%files
+    # Download from https://cryosparc.com/download (or uncomment below in %post section)
+    ./cryosparc_master.tar.gz /cryosparc/cryosparc_master.tar.gz
+    ./cryosparc_worker.tar.gz /cryosparc/cryosparc_worker.tar.gz
+
+%environment
+    export CRYOSPARC_MASTER_DIR=/cryosparc/cryosparc_master
+    export CRYOSPARC_WORKER_DIR=/cryosparc/cryosparc_worker
+    export PATH=/cryosparc/cryosparc_master/bin:/cryosparc/cryosparc_worker/bin:${PATH}
+
+%post
+    # Install dependencies
+    dnf -y update
+    dnf -y --allowerasing install \
+        curl \
+        zip \
+        unzip \
+        which \
+        iputils \
+        openssh-clients \
+        && dnf clean all
+
+    # Set up CryoSPARC environment
+    export CRYOSPARC_VERSION=v4.7.1
+
+    # IMPORTANT: EDIT THIS LINE WITH YOUR VALID BUILD-TIME LICENSE
+    export CRYOSPARC_LICENSE_ID=XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX
+
+    # Download and extract master
+    cd /cryosparc
+
+    #wget -O cryosparc_master.tar.gz "https://get.cryosparc.com/download/master-${CRYOSPARC_VERSION}/${CRYOSPARC_LICENSE_ID}"
+    tar -xvf cryosparc_master.tar.gz
+
+    # Download and extract worker
+    #wget -O cryosparc_worker.tar.gz "https://get.cryosparc.com/download/worker-${CRYOSPARC_VERSION}/${CRYOSPARC_LICENSE_ID}"
+    tar -xvf cryosparc_worker.tar.gz
+
+    rm -f cryosparc_*tar.gz
+
+    for dist in master worker
+     do
+       (
+         export CRYOSPARC_ROOT_DIR=/cryosparc/cryosparc_${dist}
+         export CRYOSPARC_CONDA_ENV="cryosparc_${dist}_env"
+         /cryosparc/cryosparc_${dist}/check_install_deps.sh
+
+         # emulate finish_deps() in cryosparc[mw]
+         . ${CRYOSPARC_ROOT_DIR}/deps/anaconda/etc/profile.d/conda.sh
+         conda run -n cryosparc_${dist}_env python -c "import libtiff"
+       )
+    done
+
+    # cryosparcm expects config.sh; must be nonempty for `cryosparcm status` to exit with zero exit status
+    # environment variables set in OOD app template/script.sh.erb
+    echo 'export CRYOSPARC_LICENSE_ID=${CRYOSPARC_LICENSE_ID}' > /cryosparc/cryosparc_master/config.sh
+    chmod +x /cryosparc/cryosparc_master/config.sh
+    ln /cryosparc/cryosparc_master/config.sh /cryosparc/cryosparc_worker/config.sh

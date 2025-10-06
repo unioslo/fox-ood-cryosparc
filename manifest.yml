@@ -1,7 +1,10 @@
 ---
 name: CryoSPARC
 category: Interactive Apps
-subcategory: Servers
+subcategory: GUIs
 role: batch_connect
 description: |
-  This app will launch a CryoSPARC server with slurm access and/or a local worker.
+  CryoSPARC is a state-of-the-art software suite for cryo-EM image processing.
+  This application runs CryoSPARC in an Apptainer container, providing an isolated environment for each user.
+
+  [CryoSPARC]: https://cryosparc.com/
