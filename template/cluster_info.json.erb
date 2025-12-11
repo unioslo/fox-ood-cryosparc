@@ -1,0 +1,9 @@
+{
+    "name": "Fox-GPU",
+    "worker_bin_path": "/cryosparc/cryosparc_worker/bin/cryosparcw",
+    "send_cmd_tpl": "{{ command }}",
+    "qsub_cmd_tpl": "<%= session.staged_root %>/slurm-submit-wrapper.sh /usr/bin/sbatch {{ script_path_abs }}",
+    "qstat_cmd_tpl": "<%= session.staged_root %>/slurm-submit-wrapper.sh /usr/bin/squeue -j {{ cluster_job_id }}",
+    "qdel_cmd_tpl": "<%= session.staged_root %>/slurm-submit-wrapper.sh /usr/bin/scancel {{ cluster_job_id }}",
+    "qinfo_cmd_tpl": "<%= session.staged_root %>/slurm-submit-wrapper.sh /usr/bin/sinfo"
+}

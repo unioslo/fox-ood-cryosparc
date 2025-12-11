@@ -1,0 +1,7 @@
+#!/bin/bash
+
+TARGET=$(hostname -I | awk '{print $1}')
+exec ssh -i "<%= ENV['HOME'] %>/.ssh/id_fox_internal" \
+     -o StrictHostKeyChecking=no \
+     -o UserKnownHostsFile=/dev/null \
+     "$TARGET" "$@"

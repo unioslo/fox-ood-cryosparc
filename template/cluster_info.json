@@ -1,9 +1,0 @@
-{
-    "name": "Fox-GPU",
-    "worker_bin_path": "/cryosparc/cryosparc_worker/bin/cryosparcw",
-    "send_cmd_tpl": "{{ command }}",
-    "qsub_cmd_tpl": "ssh -o BatchMode=yes -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null 127.0.0.1 /usr/bin/sbatch {{ script_path_abs }}",
-    "qstat_cmd_tpl": "ssh -o BatchMode=yes -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null 127.0.0.1 /usr/bin/squeue -j {{ cluster_job_id }}",
-    "qdel_cmd_tpl": "ssh -o BatchMode=yes -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null 127.0.0.1 /usr/bin/scancel {{ cluster_job_id }}",
-    "qinfo_cmd_tpl": "ssh -o BatchMode=yes -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null 127.0.0.1 /usr/bin/sinfo"
-}

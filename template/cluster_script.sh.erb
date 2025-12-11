@@ -9,7 +9,7 @@
 #SBATCH --partition=accel
 #SBATCH --gres=gpu:{{ num_gpu }}
 {% else %}
-#SBATCH --partition=default
+#SBATCH --partition=normal
 {% endif %}
 #SBATCH --time=12:0:0
 #SBATCH --output={{ job_dir_abs }}/{{ project_uid }}_{{ job_uid }}_slurm.out
