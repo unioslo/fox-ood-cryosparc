@@ -15,19 +15,32 @@
 })();
 </script>
 
-Connection options:
+### Login Credentials
+After connecting using one of the methods below, you will reach the CryoSPARC login page. Enter:
+<br>
+**user:** _<%= ENV['USER'] %>@educloud.no_
+<br>
+**password:** _(password entered in the previous form)_
+<br>
+<small>You may not be prompted to log in if you have previously authenticated and the session is still cached in your browser.</small>
+
+---
+
+### Connection options
 
 #### Client web browser + SSH tunneling
-1. Use your local SSH client to establish an SSH tunnel to the GPU node running CryoSPARC with the following command (executed from Windows PowerShell/Command Prompt or MacOS/Linux terminal):  
+1. Use your local SSH client to establish an SSH tunnel to the GPU node running CryoSPARC with the following command (executed from Windows PowerShell/Command Prompt or Ma
+cOS/Linux terminal):
 <input id="txt_ssh_command" value="ssh -NL <%= port %>:<%= host %>:<%= port %> <%= ENV['USER'] %>@fox.educloud.no" class="form-control" type="text" readonly="readonly">
 <br>
-<button id="copy-ssh-command" class="btn btn-primary btn-sm float-right copy-btn" data-clipboard-action="copy" data-clipboard-target="#txt_ssh_command" data-original-title="Copy SSH Command to Clipboard" title="Copy SSH Command to Clipboard"><span class="fa fa-clipboard"></span> Copy SSH Command to Clipboard</button>
+<button id="copy-ssh-command" class="btn btn-primary btn-sm float-right copy-btn" data-clipboard-action="copy" data-clipboard-target="#txt_ssh_command" data-original-title
+="Copy SSH Command to Clipboard" title="Copy SSH Command to Clipboard"><span class="fa fa-clipboard"></span> Copy SSH Command to Clipboard</button>
 <br>
 <br>
 Upon successful connection, the `ssh` command will appear to hang.
-Leave the `ssh` command running in the terminal window to keep the ssh tunnel established.  
+Leave the `ssh` command running in the terminal window to keep the ssh tunnel established.
 <br>
-2. Open <a href="http://localhost:<%= port %>" target="_blank">http&colon;//localhost:<%= port %></a> in your web browser 
+2. Open <a href="http://localhost:<%= port %>" target="_blank">http&colon;//localhost:<%= port %></a> in your web browser
 
 #### OOD Remote Desktop app
 1. Launch a Fox Desktop ("Interactive Apps" menu)
@@ -36,14 +49,6 @@ Leave the `ssh` command running in the terminal window to keep the ssh tunnel es
 <br>
 <button id="copy-cryosparc-url" class="btn btn-primary btn-sm float-right copy-btn" data-clipboard-action="copy" data-clipboard-target="#txt_cryosparc_url" data-original-title="Copy URL to Clipboard" title="Copy URL to Clipboard"><span class="fa fa-clipboard"></span> Copy URL to Clipboard</button>
 <br>
-
----
-After connecting via one of the above methods, at the CryoSPARC login screen enter:  
-
-**user:** _<%= ENV['USER'] %>@educloud.no_  
-**password:** _(password entered in the previous form)_  
-
-You may not be prompted to log in if you have previously authenticated and the session is still cached in your browser.  
 
 ---
 
