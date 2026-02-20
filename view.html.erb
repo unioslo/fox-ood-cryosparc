@@ -32,8 +32,7 @@ After connecting using one of the methods below, you will reach the CryoSPARC lo
 1. Use your local SSH client to establish an SSH tunnel to the GPU node running CryoSPARC with the following command (executed from Windows PowerShell/Command Prompt or MacOS/Linux terminal):
 <input id="txt_ssh_command" value="ssh -NL <%= port %>:<%= host %>:<%= port %> <%= ENV['USER'] %>@fox.educloud.no" class="form-control" type="text" readonly="readonly">
 <br>
-<button id="copy-ssh-command" class="btn btn-primary btn-sm float-right copy-btn" data-clipboard-action="copy" data-clipboard-target="#txt_ssh_command" data-original-title
-="Copy SSH Command to Clipboard" title="Copy SSH Command to Clipboard"><span class="fa fa-clipboard"></span> Copy SSH Command to Clipboard</button>
+<button id="copy-ssh-command" class="btn btn-primary btn-sm float-right copy-btn" data-clipboard-action="copy" data-clipboard-target="#txt_ssh_command" data-original-title="Copy SSH Command to Clipboard" title="Copy SSH Command to Clipboard"><span class="fa fa-clipboard"></span> Copy SSH Command to Clipboard</button>
 <br>
 <br>
 Upon successful connection, the `ssh` command will appear to hang.
