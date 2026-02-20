@@ -41,7 +41,7 @@ script:
               "--mem", "<%= ec_mem.to_i %>G",
             <%- end -%>
 
-            <%- if ec_mail_on_start -%>
+            <%- if ec_mail_on_start.to_i > 0 -%>
               "--mail-type=BEGIN",
             <%- end -%>
 
