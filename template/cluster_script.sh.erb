@@ -21,6 +21,8 @@ export APPTAINERENV_CRYOSPARC_LICENSE_ID="<%= context.cryosparc_license %>"
 export APPTAINERENV_CRYOSPARC_SSD_PATH="$SCRATCH"
 export APPTAINERENV_CRYOSPARC_IMPROVED_SSD_CACHE=true
 
+export APPTAINERENV_no_proxy=".fox,localhost"
+
 apptainer_image="/cluster/opt/OOD/fox-cryosparc-<%= context.cryosparc_version %>.sif"
 
 # Run the worker inside Apptainer GPU container

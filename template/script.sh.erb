@@ -4,6 +4,10 @@ set -o errexit -o nounset -o pipefail # -o xtrace
 
 readonly apptainer_image=/cluster/opt/OOD/fox-cryosparc-"<%= context.cryosparc_version %>".sif
 
+export APPTAINERENV_no_proxy=".fox,localhost"
+export APPTAINERENV_https_proxy="http://10.110.0.12:3128/"
+export APPTAINERENV_http_proxy="http://10.110.0.12:3128/"
+
 export FOX_ACCEL_AUTO_LONG=1
 
 # Fill in correct values in the slurm submit script template
@@ -22,6 +26,9 @@ export APPTAINERENV_CRYOSPARC_BASE_PORT=${port} # ${port}...${port}+7 will be us
 export APPTAINERENV_CRYOSPARC_DEVELOP=false
 export APPTAINERENV_CRYOSPARC_INSECURE=false
 export APPTAINERENV_CRYOSPARC_CLICK_WRAP=true
+export APPTAINERENV_CRYOSPARC_DISABLE_EXTERNAL_REQUESTS=true
+export APPTAINERENV_CRYOSPARC_CLUSTER_JOB_MONITOR_INTERVAL=30
+
 if [ ${SLURM_GPUS:-0} -gt 0 ]
 then
   export APPTAINERENV_CRYOSPARC_USE_GPU=true
@@ -64,6 +71,11 @@ then
 else
   new_db=false
 fi
+
+export APPTAINERENV_CRYOSPARC_MASTER_HOSTNAME=$(hostname)
+export APPTAINERENV_CRYOSPARC_HOSTNAME_CHECK=$(hostname)
+export CRYOSPARC_MASTER_HOSTNAME=$(hostname)
+export CRYOSPARC_HOSTNAME_CHECK=$(hostname)
 
 if ${new_db}
 then
