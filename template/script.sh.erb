@@ -66,19 +66,21 @@ cryosparcw() {
 INSTANCE="cryosparc_$(hostname)_${port}"
 apptainer instance start --nv "${apptainer_image}" $INSTANCE
 
-if [ ! -e "${APPTAINERENV_CRYOSPARC_DB_PATH}" ]
+if [ ! -f "${APPTAINERENV_CRYOSPARC_DB_PATH}/WiredTiger" ]
 then
-  new_db=true
+  new_db="true"
 else
-  new_db=false
+  new_db="false"
 fi
 
 export APPTAINERENV_CRYOSPARC_MASTER_HOSTNAME=$(hostname)
 export APPTAINERENV_CRYOSPARC_HOSTNAME_CHECK=$(hostname)
 export CRYOSPARC_MASTER_HOSTNAME=$(hostname)
 export CRYOSPARC_HOSTNAME_CHECK=$(hostname)
-if ${new_db}
+
+if [ "$new_db" = "true" ]
 then
+  mkdir -p ${cryosparc_user_path}/database
   cryosparcm start
   # initial setup for new database
   # Add a user account for the webapp
@@ -91,13 +93,20 @@ then
 else
 # adapted from `cryosparcm changeport``
   cryosparcm start database
+  sleep 10
 <%- if context.cryosparc_version.to_f >= 5.0 -%>
-  cryosparcm database check > /dev/null 2>&1 || echo "Reconfiguring database." && cryosparcm database fixport
+  if ! cryosparcm database check > /dev/null 2>&1; then
+    echo "Reconfiguring database."
+    cryosparcm database fixport
+  fi
   cryosparcm restart
   cryosparcm database check
   cryosparcm user resetpassword --email "${APPTAINERENV_USER}@educloud.no" --password "${cryosparc_user_password}"
 <%- else -%>
-  cryosparcm checkdb > /dev/null 2>&1 || echo "Reconfiguring database." && cryosparcm fixdbport
+  if ! cryosparcm checkdb > /dev/null 2>&1; then
+    echo "Reconfiguring database."
+    cryosparcm fixdbport
+  fi
   cryosparcm restart
   cryosparcm checkdb
   cryosparcm cli "reset_password('${APPTAINERENV_USER}@educloud.no', '${cryosparc_user_password}')"
