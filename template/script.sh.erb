@@ -41,7 +41,7 @@ export APPTAINERENV_PYTHONNOUSERSITE=1
 export APPTAINERENV_USER=$(id -un)
 export APPTAINER_CLEANENV=true
 
-cryosparc_user_path=$HOME/cryosparc
+cryosparc_user_path=<%= context.cryosparc_database_dir %>
 
 export PROJDIR="/fp/projects01/<%= context.auto_accounts %>"
 export APPTAINERENV_CRYOSPARC_DB_PATH=${cryosparc_user_path}/database
@@ -54,16 +54,17 @@ tmpdir=$(mktemp -d)
 export APPTAINER_BIND="${tmpdir}:/tmp:rw,$PROJDIR:$PROJDIR:rw,$SCRATCH:$SCRATCH:rw,${cryosparc_user_path}/run:/cryosparc/cryosparc_master/run:rw"
 
 cryosparcm() {
-  apptainer exec instance://cryosparc cryosparcm "$@"
+  apptainer exec instance://$INSTANCE cryosparcm "$@"
 }
 
 cryosparcw() {
-  apptainer exec instance://cryosparc cryosparcw "$@"
+  apptainer exec instance://$INSTANCE cryosparcw "$@"
 }
 
 # An instance is used to support sites that use non-setuid mode, to avoid
 # squashfuse_ll terminating prematurely when supervisord daemonizes
-apptainer instance start --nv "${apptainer_image}" cryosparc
+INSTANCE="cryosparc_$(hostname)_${port}"
+apptainer instance start --nv "${apptainer_image}" $INSTANCE
 
 if [ ! -e "${APPTAINERENV_CRYOSPARC_DB_PATH}" ]
 then
@@ -76,7 +77,6 @@ export APPTAINERENV_CRYOSPARC_MASTER_HOSTNAME=$(hostname)
 export APPTAINERENV_CRYOSPARC_HOSTNAME_CHECK=$(hostname)
 export CRYOSPARC_MASTER_HOSTNAME=$(hostname)
 export CRYOSPARC_HOSTNAME_CHECK=$(hostname)
-
 if ${new_db}
 then
   cryosparcm start
@@ -87,29 +87,41 @@ then
     --password "${cryosparc_user_password}" \
     --username "${APPTAINERENV_USER}" \
     --firstname "${APPTAINERENV_USER}" \
-    --lastname "${APPTAINERENV_USER}"  
+    --lastname "${APPTAINERENV_USER}"
 else
 # adapted from `cryosparcm changeport``
   cryosparcm start database
+<%- if context.cryosparc_version.to_f >= 5.0 -%>
+  cryosparcm database check > /dev/null 2>&1 || echo "Reconfiguring database." && cryosparcm database fixport
+  cryosparcm restart
+  cryosparcm database check
+  cryosparcm user resetpassword --email "${APPTAINERENV_USER}@educloud.no" --password "${cryosparc_user_password}"
+<%- else -%>
   cryosparcm checkdb > /dev/null 2>&1 || echo "Reconfiguring database." && cryosparcm fixdbport
   cryosparcm restart
   cryosparcm checkdb
   cryosparcm cli "reset_password('${APPTAINERENV_USER}@educloud.no', '${cryosparc_user_password}')"
+<%- end -%>
 fi
 
-# "cryosparw connect --update" doesn't work if the hostname has changed
-cryosparcm cli 'remove_scheduler_lane("default")'
-
 # Prepare job submission cluster
+<%- if context.cryosparc_version.to_f >= 5.0 -%>
+cryosparcm cluster connect \
+  --info "$CLUSTER_INFO" \
+  --script "$CLUSTER_SCRIPT"
+NOGPU="--nogpu"
+<%- else -%>
 cryosparcm cluster connect \
   --cluster "$CLUSTER_INFO" \
   --cluster-script "$CLUSTER_SCRIPT"
+NOGPU=""
+<%- end -%>
 
-cryosparcw connect --ssdpath=$SCRATCH --master $(uname -n) --worker $(uname -n) --port ${APPTAINERENV_CRYOSPARC_BASE_PORT}
+cryosparcw connect --ssdpath=$SCRATCH --master $(uname -n) --worker $(uname -n) --port ${APPTAINERENV_CRYOSPARC_BASE_PORT} $NOGPU
 # Restrict CPU & memory to Slurm-allocated amount.
 # Can only be set with --update, not on initial connect:
 # https://discuss.cryosparc.com/t/error-assigning-cpus-to-worker/9875/3
-cryosparcw connect --ssdpath=$SCRATCH --master $(uname -n) --worker $(uname -n) --port ${APPTAINERENV_CRYOSPARC_BASE_PORT} --update --cpus ${SLURM_CPUS_PER_TASK} --rams $((SLURM_MEM_PER_NODE/8000))
+cryosparcw connect --ssdpath=$SCRATCH --master $(uname -n) --worker $(uname -n) --port ${APPTAINERENV_CRYOSPARC_BASE_PORT} --update --cpus ${SLURM_CPUS_PER_TASK} --rams $((SLURM_MEM_PER_NODE/8000)) $NOGPU
 
 
 # https://guide.cryosparc.com/setup-configuration-and-management/software-system-guides/guide-installation-testing-with-cryosparcm-test

@@ -6,6 +6,7 @@ form:
   - ec_mail_on_start
   - bc_num_hours
   - cryosparc_version
+  - cryosparc_database_dir
   - cryosparc_license
   - cryosparc_user_password
   - ec_mem
@@ -46,7 +47,16 @@ attributes:
     label: "CryoSPARC version:"
     widget: "select"
     options:
+      - [ "5.0.3", "5.0.3" ]
       - [ "4.7.1", "4.7.1" ]
+
+  cryosparc_database_dir:
+    widget: "path_selector"
+    show_files: false
+    label: "CryoSPARC database directory"
+    data-target-file-type: dirs  # Valid values are: files, dirs, or both
+    readonly: false
+    help: "<small>Select your CryoSPARC database directory</small>"
 
   cryosparc_license:
     widget: text_field
