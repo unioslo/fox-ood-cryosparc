@@ -47,12 +47,14 @@ attributes:
     label: "CryoSPARC version:"
     widget: "select"
     options:
+      - [ "5.0.6", "5.0.6" ]
       - [ "5.0.3", "5.0.3" ]
       - [ "4.7.1", "4.7.1" ]
 
   cryosparc_database_dir:
     widget: "path_selector"
     show_files: false
+    placeholder: "$HOME/cryosparc"
     label: "CryoSPARC database directory"
     data-target-file-type: dirs  # Valid values are: files, dirs, or both
     readonly: false
